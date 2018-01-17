@@ -66,7 +66,7 @@ def plot_profiles(tradar, beam_height, zh, zdr, rhohv, kdp=None):
     return fig, ax
 
 
-def plot_ml_detect(tradar, beam_height, rho):
+def plot_ml_detect(tradar, beam_height, mlt, mlb, rho):
     fig, ax = plt.subplots()
     im = ax.pcolormesh(tradar,beam_height,rho,vmin=0.9,vmax=1)
     ax.plot(tradar,mlt,'k^')
@@ -77,18 +77,46 @@ def plot_ml_detect(tradar, beam_height, rho):
     return fig, ax
 
 
+def something_copy_paste(a):
+    # dunno what it is but it was there twice
+    x=[]
+    m=np.zeros(len(a))
+    above=np.empty(len(a))
+    tout=np.empty(len(a))
+    for ii in range(len(a)):
+        if ~np.isnan(a[ii]):
+            x.append(a[ii])
+            x2=np.asarray(x)
+            if ii<=1:
+                m[ii]=x2[ii]
+            elif (ii>1)&(ii<r):
+                m[ii]=np.nanmedian(x2[len(x2)-len(x2):len(x2)-1])
+            else:
+                m[ii]=np.nanmedian(x2[len(x2)-r:len(x2)-1])
+        elif np.isnan(a[ii]):
+            m[ii]=np.nan
+        above[ii]=np.abs(a[ii]-m[ii])
+        if above[ii]>1:
+            x=x[:-1]
+            #x[len(x2)-1]=np.nan
+            tout[ii]=np.nan
+        else:
+            tout[ii]=m[ii]
+    return tout
+
+
+#def main():
 if __name__ == '__main__':
     plt.close('all')
     file_name='qvp_2016-03-31.npy'
-    fname='HC_'+file_name[35:-4]
     qvp_data=np.load(file_name)
-    zdr_offset=.75
-    zh_offset=3.5
+    #zdr_offset=.75
+    #zh_offset=3.5
     zh=qvp_data[:,:,0]#+zh_offset
     zdr=qvp_data[:,:,1]#"+zdr_offset
     rhohv=qvp_data[:,:,2]
     kdp=qvp_data[:,:,3]
-    cdr=qvp_data[:,:,5]
+    #cdr=qvp_data[:,:,5]
     rhoc=qvp_data[:,:,6]
     for field in (zh, zdr, rhohv, kdp):
         field[(rhoc>1)|(rhoc<.8)]=np.nan
@@ -104,21 +132,16 @@ if __name__ == '__main__':
 
     ##
 
-    zht=np.copy(qvp_data[:,:,0])
-    zdrt=np.copy(qvp_data[:,:,1])
-    rhohvt=np.copy(qvp_data[:,:,2])
-    rhoct=np.copy(qvp_data[:,:,2])
-
     fig, ax = plot_profiles(tradar, beam_height, zh, zdr, rhohv)
 
     ######## MELTING LAYER DETECTION ########
 
     #qvp_zh=qvp_data[:,:,0]#+zh_offset
     qvp_zh=np.copy(zh)
-    z0=np.zeros((qvp_zh.shape[0],qvp_zh.shape[1]))
-    rho0=np.zeros((qvp_zh.shape[0],qvp_zh.shape[1]))
-    zdr0=np.zeros((qvp_zh.shape[0],qvp_zh.shape[1]))
-    kdp0=np.zeros((qvp_zh.shape[0],qvp_zh.shape[1]))
+    z0=np.zeros(qvp_zh.shape)
+    rho0=np.zeros(qvp_zh.shape)
+    zdr0=np.zeros(qvp_zh.shape)
+    #kdp0=np.zeros(qvp_zh.shape)
     hmask=np.where((beam_height>1.5))#|(beam_height<1))
     ##################
     for ii in range(z0.shape[1]):
@@ -165,72 +188,13 @@ if __name__ == '__main__':
         if bot[ii]>top[ii]:
             bot[ii]=np.nan
 
-    tt=np.copy(top)
-    bt=np.copy(bot)
     ##################
     r=3
-    a=top
-    x=[]
-    m=np.zeros(len(a))
-    above=np.empty(len(a))
-    tout=np.empty(len(a))
-    for ii in range(len(a)):
-        if ~np.isnan(a[ii]):
-            x.append(a[ii])
-            x2=np.asarray(x)
-            if ii<=1:
-                m[ii]=x2[ii]
-                #print ii, m[ii]
-            elif (ii>1)&(ii<r):
-                m[ii]=np.nanmedian(x2[len(x2)-len(x2):len(x2)-1])
-            else:
-                m[ii]=np.nanmedian(x2[len(x2)-r:len(x2)-1])
-
-        elif np.isnan(a[ii]):
-            m[ii]=np.nan
-
-        above[ii]=np.abs(a[ii]-m[ii])
-        if above[ii]>1:
-            x=x[:-1]
-            #x[len(x2)-1]=np.nan
-            #print len(x2),x[:len(x2)]
-            tout[ii]=np.nan
-        else:
-            tout[ii]=m[ii]
-
-
-    b=bot
-    x=[]
-    m=np.zeros(len(a))
-    below=np.empty(len(a))
-    bout=np.empty(len(a))
-    for ii in range(len(a)):
-        if ~np.isnan(b[ii]):
-            x.append(b[ii])
-            x2=np.asarray(x)
-            if ii<=1:
-                m[ii]=x2[ii]
-                #print ii, m[ii]
-            elif (ii>1)&(ii<r):
-                m[ii]=np.nanmedian(x2[len(x2)-len(x2):len(x2)-1])
-            else:
-                m[ii]=np.nanmedian(x2[len(x2)-r:len(x2)-1])
-
-        elif np.isnan(b[ii]):
-            m[ii]=np.nan
-
-        below[ii]=np.abs(b[ii]-m[ii])
-        if below[ii]>1:
-            x=x[:-1]
-            #x[len(x2)-1]=np.nan
-            #print len(x2),x[:len(x2)]
-            bout[ii]=np.nan
-        else:
-            bout[ii]=m[ii]
-
-
-    top[(np.isnan(tout))|(np.isnan(bout))]=np.nan
-    bot[(np.isnan(bout))|(np.isnan(tout))]=np.nan
+    tout = something_copy_paste(top)
+    bout = something_copy_paste(bot)
+    cond = np.isnan(tout) | np.isnan(bout)
+    top[cond]=np.nan
+    bot[cond]=np.nan
 
 
     ##################
@@ -301,10 +265,14 @@ if __name__ == '__main__':
     y[ynan[0][-1]+1:]=np.nan
     mlbnew=np.copy(y)
 
-    #a = np.array([1, np.nan, np.nan, np.nan, 3, np.nan, 4, 5, np.nan, np.nan, 6, 7])
     am=mask_knans(mlt, 8)
     mltnew[am==False]=np.nan
     am=mask_knans(mlb, 8)
     mlbnew[am==False]=np.nan
 
-    plot_ml_detect(tradar, beam_height, rho)
+    plot_ml_detect(tradar, beam_height, mlt, mlb, rho)
+
+
+#if __name__ == '__main__':
+#    main()
+
