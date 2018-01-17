@@ -32,7 +32,8 @@ def nan_helper(y):
 
 
 def mask_knans(a, x):
-    #Interpolates, then masks interpolated values if over a certain threshold.
+    """Interpolate, then mask interpolated values if over a certain threshold.
+    """
     a = np.asarray(a)
     k = a.size
     n = np.append(np.isnan(a), [False] * (x - 1))
@@ -49,6 +50,7 @@ def mask_knans(a, x):
 
 
 def plot_profiles(tradar, beam_height, zh, zdr, rhohv, kdp=None):
+    """Plot fields."""
     ncols = 3 if kdp is None else 4
     fig, ax = plt.subplots(nrows = 1, ncols=ncols, figsize=(17,6), sharex=True,
                            sharey=True)
@@ -67,6 +69,7 @@ def plot_profiles(tradar, beam_height, zh, zdr, rhohv, kdp=None):
 
 
 def plot_ml_detect(tradar, beam_height, mlt, mlb, rho):
+    """Plot ML detection result."""
     fig, ax = plt.subplots()
     im = ax.pcolormesh(tradar,beam_height,rho,vmin=0.9,vmax=1)
     ax.plot(tradar,mlt,'k^')
@@ -103,6 +106,19 @@ def something_copy_paste(a):
         else:
             tout[ii]=m[ii]
     return tout
+
+
+def ml_lim_interp(mlt):
+    y = np.copy(mlt)
+    nans, x = nan_helper(y)
+    y[nans] = np.interp(x(nans), x(~nans), y[~nans])
+    ynan = np.where(~np.isnan(mlt))
+    y[0:ynan[0][0]] = np.nan
+    y[ynan[0][-1]+1:] = np.nan
+    mlt_interp = np.copy(y)
+    am = mask_knans(mlt, 8)
+    mlt_interp[am==False] = np.nan
+    return mlt_interp
 
 
 #def main():
@@ -233,30 +249,8 @@ if __name__ == '__main__':
     mlb=np.copy(botnew)
 
     ####INTERPOLATION####
-    ##TOP
-    y= np.copy(mlt)
-    nans, x= nan_helper(y)
-    y[nans]= np.interp(x(nans), x(~nans), y[~nans])
-    x2=np.arange(zh.shape[1])
-    ynan=np.where(~np.isnan(mlt))
-    y[0:ynan[0][0]]=np.nan
-    y[ynan[0][-1]+1:]=np.nan
-    mltnew=np.copy(y)
-
-    ##BOT
-    y= np.copy(mlb)
-    nans, x= nan_helper(y)
-    y[nans]= np.interp(x(nans), x(~nans), y[~nans])
-    x2=np.arange(zh.shape[1])
-    ynan=np.where(~np.isnan(mlb))
-    y[0:ynan[0][0]]=np.nan
-    y[ynan[0][-1]+1:]=np.nan
-    mlbnew=np.copy(y)
-
-    am=mask_knans(mlt, 8)
-    mltnew[am==False]=np.nan
-    am=mask_knans(mlb, 8)
-    mlbnew[am==False]=np.nan
+    mltnew = ml_lim_interp(mlt)
+    mlbnew = ml_lim_interp(mlb)
 
     plot_ml_detect(tradar, beam_height, mlt, mlb, rho)
 
