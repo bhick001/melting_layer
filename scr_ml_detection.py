@@ -80,7 +80,7 @@ def plot_ml_detect(tradar, beam_height, mlt, mlb, rho):
     return fig, ax
 
 
-def something_copy_paste(a):
+def something_copy_paste(a, r=3):
     # dunno what it is but it was there twice
     x=[]
     m=np.zeros(len(a))
@@ -109,6 +109,7 @@ def something_copy_paste(a):
 
 
 def ml_lim_interp(mlt):
+    """ML top/bottom interpolation"""
     y = np.copy(mlt)
     nans, x = nan_helper(y)
     y[nans] = np.interp(x(nans), x(~nans), y[~nans])
@@ -144,7 +145,7 @@ if __name__ == '__main__':
     radar_height=99.5
     radar_range=np.linspace(0, 100000,bins)
     theta=8.2
-    beam_height =( beam_height_n(radar_range, theta) + radar_height)/ 1000
+    beam_height = (beam_height_n(radar_range, theta) + radar_height)/ 1000
 
     ##
 
@@ -200,7 +201,6 @@ if __name__ == '__main__':
             bot[ii]=np.nan
 
     ##################
-    r=3
     tout = something_copy_paste(top)
     bout = something_copy_paste(bot)
     cond = np.isnan(tout) | np.isnan(bout)
@@ -213,7 +213,6 @@ if __name__ == '__main__':
     topnew=np.empty(len(top))
     botnew=np.empty(len(top))
     for ii in range(rho.shape[1]):
-        #print ii
         r=np.copy(rho[:,ii])
         r[hmask]=np.nan
 
@@ -252,6 +251,7 @@ if __name__ == '__main__':
     mltnew = ml_lim_interp(mlt)
     mlbnew = ml_lim_interp(mlb)
 
+    plot_ml_detect(tradar, beam_height, mltnew, mlbnew, rho)
     plot_ml_detect(tradar, beam_height, mlt, mlb, rho)
 
 
