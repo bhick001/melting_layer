@@ -7,37 +7,11 @@ import matplotlib.pyplot as plt
 from scipy import ndimage
 import pandas as pd
 np.set_printoptions(threshold='nan')
-import matplotlib.colors as mcolors
 from numpy.lib.stride_tricks import as_strided as strided
-import matplotlib
 
 
 def beam_height_n(r, theta, re=6374000., ke=4./3.):
     return np.sqrt( r**2 + (ke*re)**2 + 2*r*ke*re*np.sin(np.radians(theta)) ) - ke*re
-
-
-def cmap_discretize(cmap, N):
-    """Return a discrete colormap from the continuous colormap cmap.
-
-        cmap: colormap instance, eg. cm.jet.
-        N: number of colors.
-
-    Example
-        x = resize(arange(100), (5,100))
-        djet = cmap_discretize(cm.jet, 5)
-        imshow(x, cmap=djet)
-    """
-    if type(cmap) == str:
-        cmap = plt.get_cmap(cmap)
-    colors_i = np.concatenate((np.linspace(0, 1., N), (0.,0.,0.,0.)))
-    colors_rgba = cmap(colors_i)
-    indices = np.linspace(0, 1., N+1)
-    cdict = {}
-    for ki,key in enumerate(('red','green','blue')):
-        cdict[key] = [ (indices[i], colors_rgba[i-1,ki], colors_rgba[i,ki])
-                       for i in xrange(N+1) ]
-    # Return colormap object.
-    return mcolors.LinearSegmentedColormap(cmap.name + "_%d"%N, cdict, 1024)
 
 
 def nan_helper(y):
@@ -57,27 +31,6 @@ def nan_helper(y):
     return np.isnan(y), lambda z: z.nonzero()[0]
 
 
-class FixPointNormalize(matplotlib.colors.Normalize):
-    """
-    Inspired by https://stackoverflow.com/questions/20144529/shifted-colorbar-matplotlib
-    Subclassing Normalize to obtain a colormap with a fixpoint
-    somewhere in the middle of the colormap.
-
-    This may be useful for a `terrain` map, to set the "sea level"
-    to a color in the blue/turquise range.
-    """
-    def __init__(self, vmin=None, vmax=None, sealevel=0, col_val = 0.21875, clip=False):
-        # sealevel is the fix point of the colormap (in data units)
-        self.sealevel = sealevel
-        # col_val is the color value in the range [0,1] that should represent the sealevel.
-        self.col_val = col_val
-        matplotlib.colors.Normalize.__init__(self, vmin, vmax, clip)
-
-    def __call__(self, value, clip=None):
-        x, y = [self.vmin, self.sealevel, self.vmax], [0, self.col_val, 1]
-        return np.ma.masked_array(np.interp(value, x, y))
-
-
 def mask_knans(a, x):
     #Interpolates, then masks interpolated values if over a certain threshold.
     a = np.asarray(a)
@@ -95,6 +48,35 @@ def mask_knans(a, x):
     return m
 
 
+def plot_profiles(tradar, beam_height, zh, zdr, rhohv, kdp=None):
+    ncols = 3 if kdp is None else 4
+    fig, ax = plt.subplots(nrows = 1, ncols=ncols, figsize=(17,6), sharex=True,
+                           sharey=True)
+    im0 = ax[0].pcolormesh(tradar,beam_height,zh,vmin=0,vmax=40)
+    fig.colorbar(im0, ax=ax[0])
+    im1 = ax[1].pcolormesh(tradar,beam_height,zdr,vmin=-1,vmax=3)
+    fig.colorbar(im1, ax=ax[1])
+    im2 = ax[2].pcolormesh(tradar,beam_height,rhohv,vmin=.8,vmax=1)
+    fig.colorbar(im2, ax=ax[2])
+    if kdp is not None:
+        im3 = ax[3].pcolormesh(tradar,beam_height,kdp,vmin=-1,vmax=1)
+        fig.colorbar(im3, ax=ax[3])
+    ax[0].set_xlim(0,24)
+    ax[0].set_ylim(0,6)
+    return fig, ax
+
+
+def plot_ml_detect(tradar, beam_height, rho):
+    fig, ax = plt.subplots()
+    im = ax.pcolormesh(tradar,beam_height,rho,vmin=0.9,vmax=1)
+    ax.plot(tradar,mlt,'k^')
+    ax.plot(tradar,mlb,'v',color=[.5,.5,.5])
+    ax.set_xlim(0,24)
+    ax.set_ylim(0,2)
+    fig.colorbar(im, ax=ax)
+    return fig, ax
+
+
 if __name__ == '__main__':
     plt.close('all')
     file_name='qvp_2016-03-31.npy'
@@ -108,10 +90,8 @@ if __name__ == '__main__':
     kdp=qvp_data[:,:,3]
     cdr=qvp_data[:,:,5]
     rhoc=qvp_data[:,:,6]
-    zh[(rhoc>1)|(rhoc<.8)]=np.nan
-    zdr[(rhoc>1)|(rhoc<.8)]=np.nan
-    rhohv[(rhoc>1)|(rhoc<.8)]=np.nan
-    kdp[(rhoc>1)|(rhoc<.8)]=np.nan
+    for field in (zh, zdr, rhohv, kdp):
+        field[(rhoc>1)|(rhoc<.8)]=np.nan
 
     z=qvp_data[:,:,0]
     bins=qvp_data[:,:,0]
@@ -129,25 +109,7 @@ if __name__ == '__main__':
     rhohvt=np.copy(qvp_data[:,:,2])
     rhoct=np.copy(qvp_data[:,:,2])
 
-    fig, ax = plt.subplots(nrows = 1, ncols=3, figsize=(18,6), sharex=True,
-                           sharey=True)
-    im0 = ax[0].pcolormesh(tradar,beam_height,zh,vmin=0,vmax=40)
-    fig.colorbar(im0, ax=ax[0])
-    im1 = ax[1].pcolormesh(tradar,beam_height,zdr,vmin=-1,vmax=3)
-    fig.colorbar(im1, ax=ax[1])
-    im2 = ax[2].pcolormesh(tradar,beam_height,rhohv,vmin=.8,vmax=1)
-    fig.colorbar(im2, ax=ax[2])
-    ax[0].set_xlim(0,24)
-    ax[0].set_ylim(0,6)
-    #plt.colorbar()
-    plt.show()
-
-    '''plt.subplot(1,4,4)
-    plt.pcolormesh(tradar,beam_height,kdp,vmin=-1,vmax=1)
-    plt.xlim(0,24)
-    plt.ylim(0,3)
-    plt.colorbar()
-    plt.show()'''
+    fig, ax = plot_profiles(tradar, beam_height, zh, zdr, rhohv)
 
     ######## MELTING LAYER DETECTION ########
 
@@ -345,14 +307,4 @@ if __name__ == '__main__':
     am=mask_knans(mlb, 8)
     mlbnew[am==False]=np.nan
 
-
-    ##
-
-    plt.figure()
-    plt.pcolormesh(tradar,beam_height,rho,vmin=0.9,vmax=1)
-    plt.plot(tradar,mlt,'k^')
-    plt.plot(tradar,mlb,'v',color=[.5,.5,.5])
-    plt.xlim(0,24)
-    plt.ylim(0,2)
-    plt.colorbar()
-    plt.show()
+    plot_ml_detect(tradar, beam_height, rho)
