@@ -136,7 +136,6 @@ if __name__ == '__main__':
 
     ######## MELTING LAYER DETECTION ########
 
-    #qvp_zh=qvp_data[:,:,0]#+zh_offset
     qvp_zh=np.copy(zh)
     z0=np.zeros(qvp_zh.shape)
     rho0=np.zeros(qvp_zh.shape)
@@ -165,10 +164,6 @@ if __name__ == '__main__':
         zd[hmask]=np.nan
         zdr0[:,ii]=(zd-np.nanmin(zd))/(np.nanmax(zd)-np.nanmin(zd))
 
-    #z=qvp_data[:,:,0]#+zh_offset
-    #zdr0[(z<5)|(rhoc>1)|(rhoc<.8)]=np.nan
-    #rho0[z<5]=np.nan
-    #zdr
     #################
     i=zdr0*(1-rho0)
     dz=ndimage.sobel(i,0)
@@ -198,10 +193,7 @@ if __name__ == '__main__':
 
 
     ##################
-    #qvp_data=np.load(file_name)
-    #rho=qvp_data[:,:,2]
     rho=np.copy(rhohv)
-    #hmask=np.where(beam_height>2)
     topnew=np.empty(len(top))
     botnew=np.empty(len(top))
     for ii in range(rho.shape[1]):
@@ -236,13 +228,9 @@ if __name__ == '__main__':
                 botnew[ii]=beam_height[b97]
         else:
             botnew[ii]=np.nan
-    #indtop=t97[0]
-        #indbot=b97[0]
-        #topnew[ii]=beam_height[indtop[0]]
-        #botnew[ii]=beam_height[indbot[-1]]
+
     mlt=np.copy(topnew)
     mlb=np.copy(botnew)
-
 
     ####INTERPOLATION####
     ##TOP
